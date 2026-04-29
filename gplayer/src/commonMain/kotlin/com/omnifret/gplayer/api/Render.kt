@@ -68,6 +68,12 @@ public class ScoreSvgRenderer(
         // Force the "svg" engine — alphaTab also exposes "skia", but
         // KMP-port stripped it (see Environment.kt).
         it.core.engine = "svg"
+        // The layout's default lazy-loading mode emits only
+        // `partialLayoutFinished` and stores partials for `renderLazyPartial`.
+        // We expose a synchronous `render()` that returns chunks directly,
+        // so disable lazy loading to force the eager render path that
+        // emits `partialRenderFinished` with `renderResult` populated.
+        it.core.enableLazyLoading = false
     }
 
     public fun render(): ScoreRenderResult {
@@ -77,6 +83,7 @@ public class ScoreSvgRenderer(
         val chunks = mutableListOf<ScoreRenderChunk>()
         var totalW = 0.0
         var totalH = 0.0
+        var caughtError: Throwable? = null
 
         renderer.partialRenderFinished.on { args: RenderFinishedEventArgs ->
             val svg = args.renderResult as? String ?: return@on
@@ -92,14 +99,19 @@ public class ScoreSvgRenderer(
             totalW = args.totalWidth
             totalH = args.totalHeight
         }
+        renderer.error.on { e -> caughtError = e }
 
-        // Convert track list to the DoubleList that alphaTab expects;
-        // null means "all tracks", which the score loader handles
-        // implicitly when trackIndexes is null.
-        val indexes: DoubleList? = tracks?.let { ts ->
+        // Convert track list to the DoubleList that alphaTab expects.
+        // Important: ScoreRenderer.renderScore short-circuits to "render
+        // nothing" if `trackIndexes == null`. To get the documented
+        // "null means all tracks" behavior, pass an empty DoubleList
+        // instead — the renderer's empty-list branch slices all tracks.
+        val indexes: DoubleList = if (tracks == null) {
+            DoubleList()
+        } else {
             val all = score.tracks
             val list = DoubleList()
-            for (t in ts) {
+            for (t in tracks) {
                 for (i in 0 until all.length.toInt()) {
                     if (all[i] === t) {
                         list.push(i.toDouble())
@@ -110,6 +122,7 @@ public class ScoreSvgRenderer(
             list
         }
         renderer.renderScore(score, indexes, null)
+        caughtError?.let { throw it }
 
         return ScoreRenderResult(
             totalWidthPx = totalW,

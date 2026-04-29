@@ -55,6 +55,14 @@ kotlin {
                 implementation(kotlin("test"))
             }
         }
+        // KMP's `commonTest/resources/` doesn't reach the Android JVM
+        // unit-test classpath via source-set hierarchy alone (AGP 9
+        // removed the old `android.sourceSets[].resources.srcDirs`
+        // API). Explicitly extend the androidUnitTest resource roots
+        // so `parseFixture(...)` resolves binary fixtures.
+        androidUnitTest {
+            resources.srcDir("src/commonTest/resources")
+        }
     }
 }
 
@@ -83,3 +91,40 @@ afterEvaluate {
             }
         }
 }
+
+// ---------------------------------------------------------------------------
+// Test fixture wiring.
+//
+// `commonTest/resources/` doesn't reach the Android JVM unit-test classpath
+// nor the Kotlin/Native iOS test executable on its own. AGP 9's new DSL
+// removed `android.sourceSets[].resources.srcDirs`, and KMP's source-set
+// declaration (`androidUnitTest { resources.srcDir(...) }`) doesn't
+// propagate to AGP's resource-processing task in this version. So we
+// stage fixtures explicitly:
+//   - For Android: mirror commonTest/resources into src/androidUnitTest/
+//     resources, which AGP DOES scan. The mirror is .gitignored.
+//   - For iOS: copy into a build dir and pass the path via env var.
+val omnifretTestResourcesDir = layout.buildDirectory.dir("omnifret-test-resources")
+val syncOmnifretTestResources = tasks.register<Sync>("syncOmnifretTestResources") {
+    from("src/commonTest/resources")
+    into(omnifretTestResourcesDir)
+}
+
+val syncOmnifretAndroidTestResources = tasks.register<Sync>("syncOmnifretAndroidTestResources") {
+    from("src/commonTest/resources")
+    into("src/androidUnitTest/resources")
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeTest>()
+    .configureEach {
+        dependsOn(syncOmnifretTestResources)
+        environment("OMNIFRET_TEST_RESOURCES", omnifretTestResourcesDir.get().asFile.absolutePath)
+    }
+
+afterEvaluate {
+    tasks.matching { it.name == "processDebugUnitTestJavaRes" || it.name == "processReleaseUnitTestJavaRes" }
+        .configureEach {
+            dependsOn(syncOmnifretAndroidTestResources)
+        }
+}
+

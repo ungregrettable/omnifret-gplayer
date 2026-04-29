@@ -45,3 +45,9 @@ replay_pid*
 *.log
 *.ctxt
 .mtj.tmp/
+
+# --- Generated test resources ---
+# Mirror of gplayer/src/commonTest/resources/, populated by the
+# syncOmnifretAndroidTestResources Gradle task so AGP's unit-test
+# resource pipeline picks up the binary fixtures.
+gplayer/src/androidUnitTest/resources/
