@@ -59,7 +59,7 @@ After publishing the AAR locally:
 // gplayer/build.gradle.kts publishes to mavenLocal automatically
 // once we wire up `mavenPublishing`. For now, depend on the AAR file:
 dependencies {
-    implementation(files("/path/to/omnifret-gp-importer/notation/build/outputs/aar/notation-release.aar"))
+    implementation(files("/path/to/omnifret-gplayer/notation/build/outputs/aar/notation-release.aar"))
     implementation(libs.kotlinx.coroutines.core)
 }
 ```
@@ -126,7 +126,7 @@ The bulk of the source code is derived from [alphaTab](https://github.com/CoderL
 (© Daniel Kuschny / CoderLine), which is also under MPL-2.0. The KMP-port-specific
 code in `com/omnifret/notation/api/`, `EnvironmentPartials.kt`, the rewritten
 `core/ecmaScript/*` files, and the Android/iOS `PlatformInfo` actuals are © 2026
-omnifret-gp-importer contributors and are also MPL-2.0.
+omnifret-gplayer contributors and are also MPL-2.0.
 
 If you redistribute this in compiled form, you must keep the source available
 under MPL-2.0 (which is satisfied by linking back to this repository).

@@ -18,5 +18,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "omnifret-gp-importer"
+rootProject.name = "omnifret-gplayer"
 include(":gplayer")
