@@ -134,6 +134,16 @@ public class Environment
             // KMP-PORT: removed the gplayerSkia engine. GPlayerSkia is JVM/JNI-
             // only; iOS gets its own ICanvas via Phase 3
             // (Compose Canvas for Android, CoreGraphics for iOS).
+            //
+            // Update (2026): the sibling :gplayer-raster-skiko module ships
+            // a ComposeRasterCanvas (ICanvas backed by Compose Multiplatform's
+            // androidx.compose.ui.graphics.Canvas — Skia-rendered on iOS via
+            // skiko, android.graphics.Canvas on Android) registered at runtime
+            // via Environment.renderEngines.set(...) for the duration of
+            // each ScoreRasterRenderer.render() call. Consumers wanting raster
+            // output should depend on :gplayer-raster-skiko; the Phase 3
+            // platform-specific path remains an option for non-Compose
+            // consumers but is no longer the default direction.
             com.omnifret.gplayer.EnvironmentPartials._createPlatformSpecificRenderEngines(renderEngines)
             return renderEngines
         }

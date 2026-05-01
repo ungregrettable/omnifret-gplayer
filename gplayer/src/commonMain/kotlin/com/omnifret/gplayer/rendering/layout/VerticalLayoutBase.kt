@@ -410,6 +410,18 @@ internal abstract class VerticalLayoutBase: com.omnifret.gplayer.rendering.layou
         args.firstMasterBarIndex = system.firstBarIndex
         args.lastMasterBarIndex = system.lastBarIndex
         system.buildBoundingsLookup(0.0, 0.0)
+        // KMP-PORT: populate per-bar x-offsets for raster consumers (see
+        // RenderFinishedEventArgs.barXOffsets). system.getBarX returns
+        // unscaled coords; multiply by display.scale so the values share
+        // units with args.width (which registerPartial scales below).
+        val displayScale: Double = this.renderer.settings.display.scale
+        val offsets = HashMap<Int, Double>()
+        val firstIdx: Int = system.firstBarIndex.toInt()
+        val lastIdx: Int = system.lastBarIndex.toInt()
+        for (i in firstIdx..lastIdx) {
+            offsets[i] = system.getBarX(i.toDouble()) * displayScale
+        }
+        args.barXOffsets = offsets
         this.registerPartial(args, fun(canvas: com.omnifret.gplayer.platform.ICanvas): Unit{
             this.renderer.canvas!!.color = this.renderer.settings.display.resources.mainGlyphColor
             this.renderer.canvas!!.textAlign = com.omnifret.gplayer.platform.TextAlign.Left

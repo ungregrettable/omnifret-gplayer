@@ -20,3 +20,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "omnifret-gplayer"
 include(":gplayer")
+include(":gplayer-raster-skiko")

@@ -21,7 +21,11 @@ internal class RegExp {
             when (c) {
                 'i' -> options += RegexOption.IGNORE_CASE
                 'm' -> options += RegexOption.MULTILINE
-                's' -> options += RegexOption.DOT_MATCHES_ALL
+                // RegexOption.DOT_MATCHES_ALL is on every per-target stdlib but
+                // isn't visible during the commonMain metadata compilation that
+                // consumers (sibling modules, Compose MP composite-build) need.
+                // Route it through expect/actual so metadata stays clean.
+                's' -> options += dotMatchesAllRegexOption()
                 'g' -> global = true
             }
         }

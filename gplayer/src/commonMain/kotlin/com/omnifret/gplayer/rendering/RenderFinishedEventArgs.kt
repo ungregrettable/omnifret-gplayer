@@ -110,8 +110,17 @@ public class RenderFinishedEventArgs
      * Gets or sets the render engine specific result object which contains the rendered music sheet.
      */
     public var renderResult: Any? = null
-    
-    
+
+
+    // KMP-PORT: per-master-bar x-offsets within this chunk, in scaled CSS px,
+    // populated by the layout engine. Consumed by ScoreRasterRenderer (in
+    // :gplayer-raster-skiko) so raster consumers can place a playhead or
+    // resolve tap-to-bar without walking the canvas output. The SVG path
+    // ignores it. Null when the layout doesn't supply per-bar positions
+    // (e.g. score info / chord diagram chunks that contain no bars).
+    public var barXOffsets: Map<Int, Double>? = null
+
+
     public constructor()
 }
 
