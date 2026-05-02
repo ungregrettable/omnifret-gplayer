@@ -194,6 +194,64 @@ class RasterRenderStructuralTest {
     }
 
     @Test
+    fun pixel_format_is_argb8888_packed_int_not_premultiplied() {
+        // Locks the format contract documented at RasterRender.kt:41 —
+        // ARGB_8888 packed ints, NOT premultiplied, row stride = pixelsWidth.
+        // The OmniFret iOS Swift consumer relies on this exact layout to
+        // wrap chunk pixels into a CGImage; any drift here silently breaks
+        // that bridge.
+        val score = parseRasterFixture("guitarpro5/notes.gp5")
+        val result = ScoreRasterRenderer(score, bravuraBytes).render()
+        val first = result.chunks.first()
+
+        // Untouched canvas pixels are exactly 0. Compose's ImageBitmap
+        // (ARGB_8888) initializes to all-zero; rendering paints on top.
+        // If init or readPixels behavior ever drifts, the empty-canvas
+        // sentinel value moves with it.
+        val zeroCount = first.pixels.count { it == 0 }
+        assertTrue(
+            zeroCount > 0,
+            "expected some untouched (zero) pixels in chunk; got none — empty-canvas init may have changed",
+        )
+
+        // At least one fully-opaque pixel exists. Staff lines and stems
+        // are drawn fully opaque; if alpha pre-multiplication accidentally
+        // crept in, the high byte would be < 0xFF wherever the painter
+        // blends with the empty canvas.
+        val opaqueCount = first.pixels.count { ((it ushr 24) and 0xFF) == 0xFF }
+        assertTrue(
+            opaqueCount > 0,
+            "no fully-opaque pixels (alpha=0xFF) — alpha may be pre-multiplied or stripped",
+        )
+
+        // Every non-zero pixel has non-zero alpha. Catches a hypothetical
+        // drift where RGB channels are written without alpha (would render
+        // invisibly through CGImage but pass the basic `it != 0` smoke).
+        for (px in first.pixels) {
+            if (px == 0) continue
+            val a = (px ushr 24) and 0xFF
+            assertTrue(
+                a > 0,
+                "pixel 0x${(px.toLong() and 0xFFFFFFFFL).toString(16)} has non-zero RGB but alpha=0",
+            )
+        }
+
+        // At least one opaque-black pixel exists. Default ink is black;
+        // the centers of staff lines and note stems should produce
+        // 0xFF000000 (signed -16777216) packed Ints. This serves as a
+        // smoke for the channel order: if Skiko ever started returning
+        // ABGR-packed Ints instead of ARGB, rendered staff lines would
+        // come out as pure-black with alpha=0, failing the alpha check
+        // above; this assertion locks the positive case.
+        val opaqueBlack = 0xFF000000.toInt()
+        val opaqueBlackCount = first.pixels.count { it == opaqueBlack }
+        assertTrue(
+            opaqueBlackCount > 0,
+            "no opaque-black pixels (0xFF000000) — staff lines / stems should produce some",
+        )
+    }
+
+    @Test
     fun music_glyphs_render_at_engraving_size_not_default_text_size() {
         // Regression: prior to fixing ComposeRasterCanvas, music-font
         // glyphs were sized off `canvas.font.size` (Arial 10 px default)

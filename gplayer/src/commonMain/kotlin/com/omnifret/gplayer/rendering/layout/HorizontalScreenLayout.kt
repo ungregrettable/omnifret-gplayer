@@ -144,6 +144,77 @@ internal class HorizontalScreenLayout: com.omnifret.gplayer.rendering.layout.Sco
                 var partialBarIndex: Double = currentBarIndex
                 var partialIndex: Double = i
                 this._system!!.buildBoundingsLookup(0.0, 0.0)
+                // KMP-PORT: populate per-bar **first-beat** x-offsets in chunk-
+                // local logical pixels for raster consumers. Mirrors the painter
+                // translation below: partial 0 paints with cx=-(-system.x)=system.x,
+                // partial p>0 paints with cx=-(getBarX(firstBar)+accoladeWidth).
+                //
+                // Uses the bounds lookup (already populated by the
+                // `buildBoundingsLookup(0.0, 0.0)` call above) to read the
+                // **actual rendered first-beat visualBounds.x**. This is the
+                // same source alphaTab's CursorHandler uses for cursor
+                // placement, so the playhead lands on whatever pixel column
+                // the renderer actually drew the first beat at — including
+                // any offsets from accidentals, bar numbers, or staff
+                // alignment that an analytical formula would miss.
+                //
+                // The bounds lookup stores positions in the (cx=0, cy=0)
+                // coordinate frame of `buildBoundingsLookup`, which for
+                // partial 0 corresponds to canvas-local pixels (the painter
+                // translates the system by +system.x to draw at
+                // canvas_x = system.x + system_local_x — and bounds were
+                // built with system.x as their origin). For partials p>0
+                // we subtract the partial's own canvas origin to re-base
+                // into chunk-local coords.
+                //
+                // Falls back to the analytical `beatGlyphsStart` if the
+                // bounds lookup is unavailable (e.g. empty score, builds
+                // skipped, future regressions in the lookup chain) so a
+                // flawed bounds path can't crash playback. Upstream to
+                // alphaTab once the regen pipeline lands.
+                val displayScale: Double = this.renderer.settings.display.scale
+                val firstBarIdx: Int = partial.masterBars[(0).toInt()].index.toInt()
+                val lastBarIdx: Int = partial.masterBars[
+                    (partial.masterBars.length - (1.0).toDouble()).toInt()
+                ].index.toInt()
+                val accoladeW: Double = this._system!!.accoladeWidth
+                val systemX: Double = this._system!!.x
+                val firstBarStaffX: Double =
+                    this._system!!.getBarX(firstBarIdx.toDouble())
+                val track = this.renderer.tracks!![(0).toInt()]
+                val staffId = this._system!!.allStaves[(0).toInt()].staffId
+                val boundsLookup = this.renderer.boundsLookup
+                val offsets = HashMap<Int, Double>()
+                for (barIdx in firstBarIdx..lastBarIdx) {
+                    val bar = track.staves[(0).toInt()].bars[(barIdx).toInt()]
+                    val barRenderer = this.getRendererForBar(staffId, bar)!!
+                    // Look up the rendered first-beat bounds in the system-
+                    // origin coordinate frame.
+                    val firstBeat = if (
+                        bar.voices.length > 0 &&
+                        bar.voices[(0).toInt()].beats.length > 0
+                    ) bar.voices[(0).toInt()].beats[(0).toInt()] else null
+                    val beatBoundsX: Double? = if (boundsLookup != null && firstBeat != null) {
+                        boundsLookup.findBeat(firstBeat)?.visualBounds?.x
+                    } else null
+                    val canvasX: Double = when {
+                        // Bounds-lookup path: visualBounds.x is in system-origin
+                        // coords (= partial-0 canvas coords). For partial 0
+                        // pass through; for partial p>0 re-base by subtracting
+                        // the partial's own canvas origin (= getBarX(firstBar)
+                        // + accoladeW − system.x, which simplifies after
+                        // mirroring the painter's renderX).
+                        beatBoundsX != null && i == 0.0 -> beatBoundsX
+                        beatBoundsX != null -> beatBoundsX - (firstBarStaffX + accoladeW)
+                        // Analytical fallback (matches the old formula).
+                        i == 0.0 ->
+                            systemX + accoladeW + barRenderer.x + barRenderer.beatGlyphsStart
+                        else ->
+                            barRenderer.x - firstBarStaffX + barRenderer.beatGlyphsStart
+                    }
+                    offsets[barIdx] = canvasX * displayScale
+                }
+                e.barXOffsets = offsets
                 this.registerPartial(e, fun(canvas: com.omnifret.gplayer.platform.ICanvas): Unit{
                     var renderX: Double = this._system!!.getBarX(partial.masterBars[(0).toInt()].index) + this._system!!.accoladeWidth
                     if (partialIndex == 0.0)
