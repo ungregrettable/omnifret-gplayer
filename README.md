@@ -17,9 +17,10 @@ OmniFret can ship the binary while satisfying alphaTab's license terms.
 | Score domain model | ✅ Working                                          |
 | Playback event generation (note-on/off, tempo, control changes) | ✅ Working                                          |
 | SVG rendering (CssFontSvg engine) | ✅ Working                                          |
-| Compose Canvas / Core Graphics native rendering | ⏳ Future work                                      |
+| Compose Canvas (Skiko) raster rendering | ✅ `:gplayer-raster-skiko` — ARGB_8888 chunks       |
+| Core Graphics native rendering | ⏳ Future work                                      |
 | Android AAR | ✅ `gplayer/build/outputs/aar/notation-release.aar` |
-| iOS XCFramework | ⚠️ Compiles to klib; not fully tested yet          |
+| iOS Kotlin/Native | ✅ Consumed via Gradle composite build              |
 
 ## Public API
 
@@ -59,20 +60,24 @@ After publishing the AAR locally:
 // gplayer/build.gradle.kts publishes to mavenLocal automatically
 // once we wire up `mavenPublishing`. For now, depend on the AAR file:
 dependencies {
-    implementation(files("/path/to/omnifret-gplayer/notation/build/outputs/aar/notation-release.aar"))
+    implementation(files("/path/to/omnifret-gplayer/gplayer/build/outputs/aar/notation-release.aar"))
     implementation(libs.kotlinx.coroutines.core)
 }
 ```
 
-### iOS (`iosApp`)
+### iOS
 
-```bash
-# Build the iOS framework (requires full Xcode, not just Command Line Tools).
-./gradlew :gplayer:assembleOmniFretGplayerReleaseXCFramework
-# Output: gplayer/build/XCFrameworks/release/OmniFretGplayer.xcframework
-```
+The iOS targets (`iosArm64`, `iosSimulatorArm64`) compile to Kotlin/Native
+`OmniFretGplayer` frameworks (configured per-target in
+`gplayer/build.gradle.kts` via `target.binaries.framework { ... }`). The
+OmniFret app consumes them through a Gradle composite build —
+`includeBuild("../omnifret-gplayer")` in its `settings.gradle.kts` — which
+re-exports the gplayer API as part of its own shared-module framework.
 
-Drop the XCFramework into Xcode (or wire as a CocoaPod). Implement `PlaybackEventListener` in Swift by calling into your existing `IOSBackingTrackEngine`.
+Standalone XCFramework packaging is not currently wired; a Swift-only
+consumer would need to add `XCFramework()` task wiring or a `cocoapods { }`
+plugin block here first. Implement `PlaybackEventListener` in Swift by
+calling into your existing audio engine.
 
 ### SVG display
 
