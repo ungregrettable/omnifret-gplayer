@@ -144,6 +144,17 @@ public class RenderFinishedEventArgs
     public var beatXOffsets: List<DoubleArray>? = null
 
 
+    // KMP-PORT: chunk-local vertical bounds for the native playhead cursor,
+    // in scaled CSS px. Mirrors CursorHandler's use of
+    // MasterBarBounds.visualBounds so raster consumers can draw a cursor
+    // that spans the visible notation/tab system instead of guessing from
+    // total chunk height. Null when the layout doesn't supply bar bounds.
+    public var cursorTopPx: Double? = null
+
+
+    // KMP-PORT: visible cursor height paired with [cursorTopPx].
+    public var cursorHeightPx: Double? = null
+
+
     public constructor()
 }
-

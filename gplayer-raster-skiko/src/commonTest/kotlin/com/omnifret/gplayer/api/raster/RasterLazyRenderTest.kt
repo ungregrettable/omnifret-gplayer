@@ -96,6 +96,32 @@ class RasterLazyRenderTest {
     }
 
     @Test
+    fun lazy_cursor_vertical_bounds_match_eager_and_rendered_chunk() {
+        val score = parseRasterFixture("guitarpro5/notes.gp5")
+        val eager = ScoreRasterRenderer(score, bravuraBytes).render()
+        val lazy = ScoreRasterRenderer(score, bravuraBytes).openLazy()
+        try {
+            for (i in eager.chunks.indices) {
+                assertEquals(
+                    eager.chunks[i].cursorTopPx,
+                    lazy.chunks[i].cursorTopPx,
+                    "chunk[$i] cursorTopPx differs",
+                )
+                assertEquals(
+                    eager.chunks[i].cursorHeightPx,
+                    lazy.chunks[i].cursorHeightPx,
+                    "chunk[$i] cursorHeightPx differs",
+                )
+                val rendered = lazy.renderChunk(i)
+                assertEquals(lazy.chunks[i].cursorTopPx, rendered.cursorTopPx, "chunk[$i] rendered cursorTopPx")
+                assertEquals(lazy.chunks[i].cursorHeightPx, rendered.cursorHeightPx, "chunk[$i] rendered cursorHeightPx")
+            }
+        } finally {
+            lazy.close()
+        }
+    }
+
+    @Test
     fun renderChunk_pixels_buffer_size_matches_eager() {
         // Pixel-level bit-equivalence between eager and lazy paths is
         // NOT a guarantee — gplayer's lazy mode runs full layout before

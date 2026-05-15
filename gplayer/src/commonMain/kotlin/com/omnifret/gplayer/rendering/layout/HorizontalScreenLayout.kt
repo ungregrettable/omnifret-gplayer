@@ -184,6 +184,13 @@ internal class HorizontalScreenLayout: com.omnifret.gplayer.rendering.layout.Sco
                 val track = this.renderer.tracks!![(0).toInt()]
                 val staffId = this._system!!.allStaves[(0).toInt()].staffId
                 val boundsLookup = this.renderer.boundsLookup
+                val cursorBounds = boundsLookup
+                    ?.findMasterBarByIndex(firstBarIdx.toDouble())
+                    ?.visualBounds
+                if (cursorBounds != null) {
+                    e.cursorTopPx = cursorBounds.y * displayScale
+                    e.cursorHeightPx = cursorBounds.h * displayScale
+                }
                 val offsets = HashMap<Int, Double>()
                 val beatOffsets = ArrayList<DoubleArray>()
                 for (barIdx in firstBarIdx..lastBarIdx) {
@@ -361,4 +368,3 @@ internal class HorizontalScreenLayoutPartialInfo
     
     public constructor()
 }
-

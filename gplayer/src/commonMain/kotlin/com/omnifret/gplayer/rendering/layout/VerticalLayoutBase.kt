@@ -419,6 +419,13 @@ internal abstract class VerticalLayoutBase: com.omnifret.gplayer.rendering.layou
         val beatOffsets = ArrayList<DoubleArray>()
         val firstIdx: Int = system.firstBarIndex.toInt()
         val lastIdx: Int = system.lastBarIndex.toInt()
+        val cursorBounds = this.renderer.boundsLookup
+            ?.findMasterBarByIndex(firstIdx.toDouble())
+            ?.visualBounds
+        if (cursorBounds != null) {
+            args.cursorTopPx = (cursorBounds.y - system.y) * displayScale
+            args.cursorHeightPx = cursorBounds.h * displayScale
+        }
         val staffId: String? = if (system.allStaves.length > 0)
             system.allStaves[(0).toInt()].staffId else null
         val track0 = if (this.renderer.tracks!!.length > 0)
@@ -631,4 +638,3 @@ internal abstract class VerticalLayoutBase: com.omnifret.gplayer.rendering.layou
     public constructor(renderer: com.omnifret.gplayer.rendering.ScoreRenderer)
         : super(renderer)
 }
-

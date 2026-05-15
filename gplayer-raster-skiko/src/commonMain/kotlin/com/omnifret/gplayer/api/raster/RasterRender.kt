@@ -37,6 +37,8 @@ import com.omnifret.gplayer.rendering.ScoreRenderer
  *   layout doesn't supply per-bar positions (e.g. score-info / chord-
  *   diagram chunks). Consumers can fall back to geometric interpolation
  *   in that case.
+ * - [cursorTopPx] / [cursorHeightPx]: chunk-relative y bounds in
+ *   **logical CSS pixels** for the native gplayer cursor, when available.
  *
  * [pixels] format: ARGB_8888 packed ints, row-major, **not** premultiplied.
  * Row stride equals [pixelsWidth] (no padding). Same convention as
@@ -66,6 +68,8 @@ public data class ScoreRasterChunk(
      * few px right of the bar line). Empty when no beats are present.
      */
     val beatXOffsets: List<Pair<Double, Float>> = emptyList(),
+    val cursorTopPx: Float? = null,
+    val cursorHeightPx: Float? = null,
 )
 
 /** Result of a full-score raster render. */
@@ -102,6 +106,8 @@ public data class ScoreRasterChunkLayout(
     /** Every beat's `(absoluteTick, x)` pair inside this chunk, sorted
      *  by tick. See [ScoreRasterChunk.beatXOffsets]. */
     val beatXOffsets: List<Pair<Double, Float>> = emptyList(),
+    val cursorTopPx: Float? = null,
+    val cursorHeightPx: Float? = null,
     internal val resultId: String,
 )
 
@@ -189,6 +195,8 @@ public class ScoreRasterRenderer(
                     lastBarIndex = args.lastMasterBarIndex.toInt(),
                     barXOffsets = barOffsets,
                     beatXOffsets = beatOffsets,
+                    cursorTopPx = args.cursorTopPx?.toFloat(),
+                    cursorHeightPx = args.cursorHeightPx?.toFloat(),
                 )
             }
             renderer.renderFinished.on { args: RenderFinishedEventArgs ->
@@ -282,6 +290,8 @@ public class ScoreRasterRenderer(
                     yLogicalPx = args.y.toInt(),
                     barXOffsets = barOffsets,
                     beatXOffsets = beatOffsets,
+                    cursorTopPx = args.cursorTopPx?.toFloat(),
+                    cursorHeightPx = args.cursorHeightPx?.toFloat(),
                     resultId = args.id,
                 )
             }
@@ -392,6 +402,8 @@ public class ScoreRasterLazyHandle internal constructor(
                         lastBarIndex = layout.lastBarIndex,
                         barXOffsets = layout.barXOffsets,
                         beatXOffsets = layout.beatXOffsets,
+                        cursorTopPx = layout.cursorTopPx,
+                        cursorHeightPx = layout.cursorHeightPx,
                     )
                 }
             }

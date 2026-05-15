@@ -14,6 +14,7 @@ import com.omnifret.gplayer.raster.test.bravuraBytes
 import com.omnifret.gplayer.raster.test.parseRasterFixture
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -105,6 +106,23 @@ class RasterRenderStructuralTest {
                 )
                 prev = x
             }
+        }
+    }
+
+    @Test
+    fun cursor_vertical_bounds_populated_for_score_chunks() {
+        val score = parseRasterFixture("guitarpro5/notes.gp5")
+        val result = ScoreRasterRenderer(score, bravuraBytes).render()
+        for ((i, chunk) in result.chunks.withIndex()) {
+            if (chunk.firstBarIndex < 0) continue
+            val top = assertNotNull(chunk.cursorTopPx, "chunk[$i] missing cursorTopPx")
+            val height = assertNotNull(chunk.cursorHeightPx, "chunk[$i] missing cursorHeightPx")
+            assertTrue(top >= 0f, "chunk[$i] cursorTopPx=$top < 0")
+            assertTrue(height > 0f, "chunk[$i] cursorHeightPx=$height <= 0")
+            assertTrue(
+                top + height <= chunk.heightPx.toFloat(),
+                "chunk[$i] cursor bounds ${top}..${top + height} exceed height ${chunk.heightPx}",
+            )
         }
     }
 
